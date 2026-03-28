@@ -3,77 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Library - Auto Thumbnails</title>
+    <title>3D Asset Library - Auto Thumbs</title>
     <style>
         :root {
             --bg: #0a0a0a;
             --card: #161616;
             --accent: #007bff;
+            --text: #ffffff;
         }
 
         body { 
-            margin: 0; font-family: 'Inter', sans-serif; 
-            background: var(--bg); color: white; 
+            margin: 0; font-family: 'Inter', 'Segoe UI', sans-serif; 
+            background: var(--bg); color: var(--text); overflow-x: hidden;
         }
 
-        header { padding: 30px; text-align: center; border-bottom: 1px solid #222; }
-        
-        .controls { display: flex; justify-content: center; gap: 10px; margin-top: 20px; }
+        header { 
+            padding: 40px 20px; text-align: center; 
+            background: linear-gradient(to bottom, #111, var(--bg));
+            border-bottom: 1px solid #222; 
+        }
+
+        .controls { display: flex; justify-content: center; gap: 10px; margin-top: 25px; flex-wrap: wrap; }
         input, select { 
-            padding: 10px; background: #222; border: 1px solid #444; 
-            color: white; border-radius: 5px; 
+            padding: 12px 20px; background: #222; border: 1px solid #444; 
+            color: white; border-radius: 8px; outline: none;
         }
 
-        /* Grid */
+        /* Grid System */
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 20px; padding: 40px;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 30px; padding: 40px;
+            max-width: 1400px; margin: 0 auto;
         }
 
         .card {
-            background: var(--card); border-radius: 10px; overflow: hidden;
+            background: var(--card); border-radius: 12px; overflow: hidden;
             cursor: pointer; transition: 0.3s; border: 1px solid #333;
         }
-        .card:hover { transform: translateY(-5px); border-color: var(--accent); }
+        .card:hover { transform: translateY(-8px); border-color: var(--accent); box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
 
-        /* The canvas used for thumbnails */
-        .thumb-canvas {
-            width: 100%; height: 150px; background: #000;
-            display: block; object-fit: cover;
+        /* Thumbnail Area */
+        .thumb-box {
+            width: 100%; height: 180px; background: #000;
+            display: flex; align-items: center; justify-content: center;
+            position: relative;
         }
+        .thumb-img { width: 100%; height: 100%; object-fit: cover; }
+        .generating-text { font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 1px; }
 
-        .card-info { padding: 12px; font-size: 0.9rem; }
-        .tag { font-size: 0.7rem; color: #888; text-transform: uppercase; }
+        .card-info { padding: 15px; border-top: 1px solid #222; }
+        .card-name { display: block; font-weight: bold; font-size: 1.1rem; margin-bottom: 5px; }
+        .tag { font-size: 0.75rem; color: #888; background: #252525; padding: 3px 10px; border-radius: 4px; }
 
-        /* Modal */
+        /* Modal Preview */
         .modal {
             display: none; position: fixed; inset: 0; 
-            background: rgba(0,0,0,0.9); z-index: 1000;
+            background: rgba(0,0,0,0.95); z-index: 1000;
+            backdrop-filter: blur(10px);
         }
         .modal-content {
-            width: 90%; max-width: 900px; margin: 50px auto;
-            background: #111; border-radius: 15px; overflow: hidden;
+            width: 90%; max-width: 1100px; margin: 2% auto;
+            background: #111; border-radius: 20px; overflow: hidden;
+            border: 1px solid #444; position: relative;
         }
-        #viewer { width: 100%; height: 500px; position: relative; }
-        .details { padding: 20px; display: flex; justify-content: space-between; align-items: center; }
-        
+        #viewer { width: 100%; height: 550px; background: #000; }
+        .modal-footer { padding: 25px; display: flex; justify-content: space-between; align-items: center; background: #161616; }
         #download-btn {
             background: var(--accent); color: white; border: none;
-            padding: 12px 25px; border-radius: 5px; cursor: pointer;
+            padding: 15px 35px; border-radius: 8px; cursor: pointer;
+            font-weight: bold; transition: 0.3s;
         }
-
-        #hidden-renderer { display: none; } /* Used for generating thumbs */
+        #download-btn:hover { background: #0056b3; }
+        .close-btn { position: absolute; top: 15px; right: 25px; color: #fff; font-size: 35px; cursor: pointer; z-index: 1001; opacity: 0.6; }
+        .close-btn:hover { opacity: 1; }
     </style>
 </head>
 <body>
 
 <header>
-    <h1>3D ASSET EXPLORER</h1>
+    <h1>3D ASSET LIBRARY</h1>
     <div class="controls">
-        <input type="text" id="search" placeholder="Search...">
+        <input type="text" id="search" placeholder="Search models...">
         <select id="filter">
-            <option value="all">All</option>
+            <option value="all">All Categories</option>
             <option value="Characters">Characters</option>
             <option value="Interactable">Interactable</option>
             <option value="Props">Props</option>
@@ -86,13 +99,14 @@
 
 <div class="modal" id="modal">
     <div class="modal-content">
+        <span class="close-btn" id="close-modal">&times;</span>
         <div id="viewer"></div>
-        <div class="details">
+        <div class="modal-footer">
             <div>
                 <h2 id="m-title" style="margin:0">Name</h2>
-                <p id="m-stats" style="color:#666; font-family:monospace;"></p>
+                <p id="m-stats" style="color:#888; font-family: monospace; margin: 5px 0 0 0;"></p>
             </div>
-            <button id="download-btn">Download FBX</button>
+            <button id="download-btn">DOWNLOAD FBX</button>
         </div>
     </div>
 </div>
@@ -111,121 +125,128 @@
     import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
+    // LISTA TA ACTUALIZATA (FARA ICON)
     const myModels = [
         { name: "Crate", file: "Crate.fbx", cat: "Interactable" },
-        { name: "Robot", file: "Robot.fbx", cat: "Characters" },
+        { name: "Robo Arm", file: "RoboArm.fbx", cat: "Interactable" },
+        { name: "Robo Arm 2", file: "RoboArm2.fbx", cat: "Interactable" },
+        { name: "Robot Classic", file: "Robot.fbx", cat: "Characters" },
+        { name: "Robot V2", file: "RobotV2.fbx", cat: "Characters" },
+        { name: "Robot V3", file: "RobotV3.fbx", cat: "Characters" },
+        { name: "Robot V4", file: "RobotV4.fbx", cat: "Characters" },
         { name: "Generator", file: "Generator.fbx", cat: "Props" },
-        { name: "Warning Sign", file: "FireWarningSign.fbx", cat: "Decor" }
-        // Add more...
+        { name: "Industrial Tank", file: "IndustrialTank.fbx", cat: "Props" },
+        { name: "Tank Stand", file: "IndustrialTankStand.fbx", cat: "Props" },
+        { name: "Tank Tower", file: "IndustrialTankTower.fbx", cat: "Props" },
+        { name: "Reservoir", file: "Reservoir.fbx", cat: "Props" },
+        { name: "Stand Button", file: "StandButton.fbx", cat: "Props" },
+        { name: "Wooden Pallet", file: "WoodenPallet.fbx", cat: "Props" },
+        { name: "Wooden Pallet V2", file: "WoodenPalletV2.fbx", cat: "Props" },
+        { name: "Metal Barrel", file: "MetalBarrel.fbx", cat: "Props" },
+        { name: "Fire Warning", file: "FireWarningSign.fbx", cat: "Decor" },
+        { name: "Electrical Warning", file: "ElectricalWarningSign.fbx", cat: "Decor" },
+        { name: "Radioactive Warning", file: "RadioActiveWarningSign.fbx", cat: "Decor" }
     ];
 
     const grid = document.getElementById('asset-grid');
     const loader = new FBXLoader();
-    let mainScene, mainCam, mainRenderer, mainControls;
+    let mainScene, mainCam, mainRenderer, mainControls, currentModel;
 
-    // --- 1. THUMBNAIL GENERATOR ENGINE ---
-    // This creates a tiny temporary renderer to "take a photo" of the model
-    async function getThumbnail(fileName) {
+    // --- GENERATOR DE THUMBNAILS ---
+    async function createThumbnail(fileName) {
         return new Promise((resolve) => {
-            const width = 200, height = 150;
-            const thumbRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
-            thumbRenderer.setSize(width, height);
+            const canvasSize = 256;
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+            renderer.setSize(canvasSize, canvasSize);
             
-            const thumbScene = new THREE.Scene();
-            thumbScene.background = new THREE.Color(0x111111);
-            
-            const light = new THREE.HemisphereLight(0xffffff, 0x444444, 3);
-            thumbScene.add(light);
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x111111);
+            scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 3));
 
-            const cam = new THREE.PerspectiveCamera(45, width / height, 0.1, 10000);
+            const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 10000);
             
             loader.load(`models/${fileName}`, (obj) => {
                 const box = new THREE.Box3().setFromObject(obj);
-                const size = box.getSize(new THREE.Vector3()).length();
                 const center = box.getCenter(new THREE.Vector3());
-                
+                const size = box.getSize(new THREE.Vector3()).length();
                 obj.position.sub(center);
-                thumbScene.add(obj);
+                scene.add(obj);
                 
-                cam.position.set(size, size * 0.8, size);
-                cam.lookAt(0,0,0);
+                camera.position.set(size * 0.8, size * 0.8, size * 0.8);
+                camera.lookAt(0,0,0);
                 
-                thumbRenderer.render(thumbScene, cam);
-                const dataUrl = thumbRenderer.domElement.toDataURL(); // This is the "Image"
-                
-                // Cleanup to save memory
-                thumbRenderer.dispose();
-                resolve(dataUrl);
-            }, undefined, () => resolve('https://via.placeholder.com/200x150?text=Error'));
+                renderer.render(scene, camera);
+                const data = renderer.domElement.toDataURL();
+                renderer.dispose();
+                resolve(data);
+            }, undefined, () => resolve(null));
         });
     }
 
-    // --- 2. RENDER GRID ---
-    async function initGrid() {
-        const searchText = document.getElementById('search').value.toLowerCase();
-        const catFilter = document.getElementById('filter').value;
+    // --- RENDER GRID ---
+    function renderGrid() {
+        const search = document.getElementById('search').value.toLowerCase();
+        const cat = document.getElementById('filter').value;
         grid.innerHTML = "";
 
         const filtered = myModels.filter(m => 
-            (catFilter === 'all' || m.cat === catFilter) && 
-            m.name.toLowerCase().includes(searchText)
+            (cat === 'all' || m.cat === cat) && 
+            m.name.toLowerCase().includes(search)
         );
 
-        for (const m of filtered) {
+        filtered.forEach(m => {
+            const id = m.name.replace(/\s+/g, '');
             const card = document.createElement('div');
             card.className = 'card';
-            
-            // Temporary loading state
             card.innerHTML = `
-                <div class="thumb-canvas" style="display:flex; align-items:center; justify-content:center; font-size:10px; color:#555;">Loading Preview...</div>
+                <div class="thumb-box" id="box-${id}">
+                    <span class="generating-text">Generating...</span>
+                </div>
                 <div class="card-info">
-                    <span class="card-name"><b>${m.name}</b></span><br>
+                    <span class="card-name">${m.name}</span>
                     <span class="tag">${m.cat}</span>
                 </div>
             `;
             grid.appendChild(card);
             card.onclick = () => openModal(m);
 
-            // Generate thumbnail on the fly
-            getThumbnail(m.file).then(url => {
-                const img = new Image();
-                img.src = url;
-                img.className = "thumb-canvas";
-                card.querySelector('.thumb-canvas').replaceWith(img);
+            createThumbnail(m.file).then(img => {
+                const box = document.getElementById(`box-${id}`);
+                if(img && box) box.innerHTML = `<img src="${img}" class="thumb-img">`;
             });
-        }
+        });
     }
 
-    // --- 3. MAIN VIEWER (MODAL) ---
+    // --- VIEWER MODAL ---
     function openModal(m) {
         document.getElementById('modal').style.display = 'block';
         document.getElementById('m-title').innerText = m.name;
-        
+        window.currentFile = m.file;
+
         if (!mainRenderer) {
             const container = document.getElementById('viewer');
             mainScene = new THREE.Scene();
-            mainScene.background = new THREE.Color(0x050505);
+            mainScene.background = new THREE.Color(0x080808);
             mainCam = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 1, 20000);
-            
             mainRenderer = new THREE.WebGLRenderer({ antialias: true });
             mainRenderer.setSize(container.clientWidth, container.clientHeight);
             container.appendChild(mainRenderer.domElement);
 
-            const light = new THREE.HemisphereLight(0xffffff, 0x444444, 3);
-            mainScene.add(light);
-            
+            mainScene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 3));
             mainControls = new OrbitControls(mainCam, mainRenderer.domElement);
-            
-            function anim() {
-                requestAnimationFrame(anim);
+            mainControls.enableDamping = true;
+
+            function animate() {
+                requestAnimationFrame(animate);
                 mainControls.update();
                 mainRenderer.render(mainScene, mainCam);
             }
-            anim();
+            animate();
         }
 
-        // Load specific model
         if(currentModel) mainScene.remove(currentModel);
+        document.getElementById('m-stats').innerText = "Loading Model...";
+
         loader.load(`models/${m.file}`, (obj) => {
             currentModel = obj;
             const box = new THREE.Box3().setFromObject(obj);
@@ -233,22 +254,18 @@
             obj.position.sub(box.getCenter(new THREE.Vector3()));
             mainScene.add(obj);
             mainCam.position.set(size, size, size);
-            
-            // Polycount
+            mainControls.target.set(0,0,0);
+
             let tris = 0;
             obj.traverse(n => { if(n.isMesh) tris += n.geometry.attributes.position.count / 3; });
-            document.getElementById('m-stats').innerText = `Polygons: ${Math.round(tris).toLocaleString()}`;
+            document.getElementById('m-stats').innerText = `Polygons: ${Math.round(tris).toLocaleString()} triangles`;
         });
-
-        window.currentFile = m.file;
     }
 
-    let currentModel;
-
     // Events
-    document.getElementById('search').oninput = initGrid;
-    document.getElementById('filter').onchange = initGrid;
-    document.getElementById('modal').onclick = (e) => { if(e.target.id === 'modal') e.target.style.display='none'; }
+    document.getElementById('close-modal').onclick = () => document.getElementById('modal').style.display = 'none';
+    document.getElementById('search').oninput = renderGrid;
+    document.getElementById('filter').onchange = renderGrid;
     document.getElementById('download-btn').onclick = () => {
         const a = document.createElement('a');
         a.href = `models/${window.currentFile}`;
@@ -256,7 +273,7 @@
         a.click();
     };
 
-    initGrid();
+    renderGrid();
 </script>
 </body>
 </html>
