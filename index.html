@@ -6,12 +6,12 @@
     <title>3D Asset Library - Neutral Light</title>
     <style>
         :root {
-            --bg-main: #f5f5f5;        /* Gri neutru deschis */
-            --bg-card: #ffffff;      /* Alb pentru contrast */
+            --bg-main: #e0e0e0;        /* Gri neutru deschis */
+            --bg-card: #ffffff;      /* Alb curat pentru contrast */
             --accent: #5c85d6;         
             --text-main: #333333;
             --text-dim: #666666;
-            --border: #dddddd;
+            --border: #cccccc;
         }
 
         body { 
@@ -21,12 +21,12 @@
         }
 
         header { 
-            padding: 60px 20px; text-align: center; 
+            padding: 50px 20px; text-align: center; 
             background: var(--bg-card);
             border-bottom: 1px solid var(--border); 
         }
 
-        h1 { margin: 0; font-weight: 800; letter-spacing: -1px; font-size: 2.5rem; }
+        h1 { margin: 0; font-weight: 800; letter-spacing: -1px; font-size: 2.2rem; }
 
         .controls { display: flex; justify-content: center; gap: 12px; margin-top: 25px; flex-wrap: wrap; }
 
@@ -46,14 +46,15 @@
 
         .card {
             background: var(--bg-card); border-radius: 12px; overflow: hidden;
-            cursor: pointer; transition: all 0.3s ease; 
+            cursor: pointer; transition: transform 0.2s, border-color 0.3s; 
             border: 1px solid var(--border);
             box-shadow: 0 4px 6px rgba(0,0,0,0.02);
         }
-        .card:hover { transform: translateY(-8px); border-color: var(--accent); box-shadow: 0 12px 20px rgba(0,0,0,0.08); }
+        .card:hover { transform: translateY(-8px); border-color: var(--accent); box-shadow: 0 10px 15px rgba(0,0,0,0.06); }
 
+        /* Thumbnail Area with light gray background to pop the models */
         .thumb-box {
-            width: 100%; height: 180px; background: #ebebeb;
+            width: 100%; height: 180px; background: #eaeaea;
             display: flex; align-items: center; justify-content: center;
             border-bottom: 1px solid var(--border);
         }
@@ -62,25 +63,22 @@
 
         .card-info { padding: 20px; }
         .card-name { display: block; font-weight: 700; margin-bottom: 6px; font-size: 1.1rem; }
-        .tag { 
-            font-size: 0.65rem; color: var(--text-dim); background: #eee; 
-            padding: 4px 8px; border-radius: 4px; text-transform: uppercase; font-weight: 600;
-        }
+        .tag { font-size: 0.65rem; color: var(--text-dim); background: #eee; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; font-weight: 600; }
 
         /* Modal View */
         .modal {
             display: none; position: fixed; inset: 0; 
-            background: rgba(255,255,255,0.9); z-index: 1000;
-            backdrop-filter: blur(10px);
+            background: rgba(255,255,255,0.85); z-index: 1000;
+            backdrop-filter: blur(5px);
         }
         .modal-content {
-            width: 90%; max-width: 1100px; margin: 2% auto;
+            width: 90%; max-width: 1100px; margin: 3% auto;
             background: white; border-radius: 20px; overflow: hidden;
             border: 1px solid var(--border); position: relative;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.15);
+            box-shadow: 0 30px 50px rgba(0,0,0,0.1);
         }
         
-        #viewer { width: 100%; height: 550px; background: #f9f9f9; }
+        #viewer { width: 100%; height: 550px; background: #fdfdfd; }
         
         .modal-footer { 
             padding: 25px 40px; display: flex; justify-content: space-between; 
@@ -156,7 +154,7 @@
         { name: "Crate", file: "Crate.fbx", cat: "Interactable" },
         { name: "Robo Arm", file: "RoboArm.fbx", cat: "Interactable" },
         { name: "Robo Arm 2", file: "RoboArm2.fbx", cat: "Interactable" },
-
+        
         { name: "Robot Classic", file: "Robot.fbx", cat: "Characters" },
         { name: "Robot V2", file: "RobotV2.fbx", cat: "Characters" },
         { name: "Robot V3", file: "RobotV3.fbx", cat: "Characters" },
@@ -171,7 +169,7 @@
         { name: "Wooden Pallet", file: "WoodenPallet.fbx", cat: "Props" },
         { name: "Wooden Pallet V2", file: "WoodenPalletV2.fbx", cat: "Props" },
         { name: "Metal Barrel", file: "MetalBarrel.fbx", cat: "Props" },
-        
+
         { name: "Fire Warning", file: "FireWarningSign.fbx", cat: "Decor" },
         { name: "Electrical Warning", file: "ElectricalWarningSign.fbx", cat: "Decor" },
         { name: "Radioactive Warning", file: "RadioActiveWarningSign.fbx", cat: "Decor" }
@@ -194,7 +192,8 @@
         if (e.key === "Escape" && modalEl.style.display === 'block') closeModal();
     });
 
-    // --- SNAPSHOT CU ILUMINARE IMBUNATATITA ---
+    // --- SNAPSHOT WITH IMPROVED LIGHTING ---
+    // Fixes the issue where the first 3 models were black
     async function getSnapshot(fileName) {
         return new Promise((resolve) => {
             const size = 256;
@@ -202,8 +201,10 @@
             renderer.setSize(size, size);
             const scene = new THREE.Scene();
             
-            // Lumina Ambientala + Lumina Directionala pentru a vedea detaliile
+            // Add a strong ambient light to provide baseline visibility
             scene.add(new THREE.AmbientLight(0xffffff, 1.5)); 
+            
+            // Add a powerful directional light from an angle to create definition
             const dirLight = new THREE.DirectionalLight(0xffffff, 2);
             dirLight.position.set(5, 5, 5);
             scene.add(dirLight);
@@ -217,7 +218,7 @@
                 obj.position.sub(center);
                 scene.add(obj);
                 
-                // Pozitionare camera 45 grade
+                // Position camera at a standard 45-degree angle
                 camera.position.set(bSize * 0.9, bSize * 0.9, bSize * 0.9);
                 camera.lookAt(0,0,0);
                 
@@ -243,7 +244,7 @@
             const card = document.createElement('div');
             card.className = 'card';
             card.innerHTML = `
-                <div class="thumb-box" id="thumb-${id}"><span class="gen-text">PREVIEWING...</span></div>
+                <div class="thumb-box" id="thumb-${id}"><span class="gen-text">GENERATING...</span></div>
                 <div class="card-info">
                     <span class="card-name">${m.name}</span>
                     <span class="tag">${m.cat}</span>
@@ -267,13 +268,14 @@
         if (!mainRenderer) {
             const container = document.getElementById('viewer');
             mainScene = new THREE.Scene();
+            // Modal background should match the neutral vibe
             mainScene.background = new THREE.Color(0xf9f9f9);
             mainCam = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 1, 20000);
             mainRenderer = new THREE.WebGLRenderer({ antialias: true });
             mainRenderer.setSize(container.clientWidth, container.clientHeight);
             container.appendChild(mainRenderer.domElement);
             
-            // Iluminare Modal
+            // Improved Modal Lighting
             mainScene.add(new THREE.AmbientLight(0xffffff, 1));
             const dLight = new THREE.DirectionalLight(0xffffff, 2);
             dLight.position.set(10, 20, 10);
@@ -303,6 +305,7 @@
             mainCam.position.set(bSize, bSize, bSize);
             mainControls.target.set(0,0,0);
 
+            // Correct Stats calculation for Triangles AND Vertices
             let tris = 0;
             let verts = 0;
             obj.traverse(n => { 
