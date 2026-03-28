@@ -3,37 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Library - Grid Viewer</title>
+    <title>3D Library - Categorii și Căutare</title>
     <style>
-        body { margin: 0; padding: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1a1a1a; display: flex; }
+        body { margin: 0; padding: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background-color: #1a1a1a; display: flex; }
         
         /* Meniul Lateral */
         #sidebar { 
-            width: 250px; height: 100vh; background: #2c2c2c; color: white; 
-            padding: 20px; box-sizing: border-box; overflow-y: auto; border-right: 1px solid #444;
-            z-index: 100;
+            width: 280px; height: 100vh; background: #2c2c2c; color: white; 
+            padding: 20px; box-sizing: border-box; display: flex; flex-direction: column;
+            border-right: 1px solid #444; z-index: 100;
+        }
+
+        /* Input Căutare */
+        #search-input {
+            width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 5px;
+            border: 1px solid #444; background: #1a1a1a; color: white; box-sizing: border-box;
+        }
+
+        /* Select Categorie */
+        #category-filter {
+            width: 100%; padding: 10px; margin-bottom: 20px; border-radius: 5px;
+            border: 1px solid #444; background: #1a1a1a; color: white; cursor: pointer;
         }
         
+        #model-list { flex-grow: 1; overflow-y: auto; margin-bottom: 20px; }
+        
         .model-card {
-            background: #3d3d3d; padding: 10px; margin-bottom: 10px; border-radius: 5px;
-            cursor: pointer; transition: 0.3s; text-align: center; border: 2px solid transparent;
+            background: #3d3d3d; padding: 10px; margin-bottom: 8px; border-radius: 5px;
+            cursor: pointer; transition: 0.2s; border: 2px solid transparent; font-size: 0.9rem;
         }
-        .model-card:hover { background: #505050; border-color: #007bff; }
+        .model-card:hover { background: #4a4a4a; }
         .model-card.active { border-color: #007bff; background: #444; }
 
-        /* Zona de Vizualizare */
+        #download-btn {
+            background: #28a745; color: white; border: none; padding: 12px;
+            border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%;
+        }
+        #download-btn:disabled { background: #555; opacity: 0.6; }
+
+        /* Vizualizator */
         #viewer-container { flex-grow: 1; position: relative; height: 100vh; }
-        #loader { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; display: none; }
-        canvas { display: block; }
+        #loader { 
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+            color: white; background: rgba(0,0,0,0.8); padding: 15px 25px; border-radius: 30px;
+            display: none; z-index: 10;
+        }
     </style>
 </head>
 <body>
 
     <div id="sidebar">
-        <h3>Modele 3D</h3>
-        <div id="model-list">
-            <!-- Aici vor apărea modelele tale -->
-        </div>
+        <h3 style="margin-top:0">📦 3D Assets</h3>
+        
+        <input type="text" id="search-input" placeholder="Caută model...">
+        
+        <select id="category-filter">
+            <option value="all">Toate categoriile</option>
+            <option value="Industrial">Industrial</option>
+            <option value="Robotics">Robotics</option>
+            <option value="Props">Props</option>
+            <option value="Signs">Semne/Avertizări</option>
+        </select>
+
+        <div id="model-list"></div>
+        
+        <button id="download-btn" disabled>⬇️ Descarcă FBX</button>
     </div>
 
     <div id="viewer-container">
@@ -54,8 +88,7 @@
         import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-        // --- LISTA TA DE MODELE ---
-        // Adaugă aici numele fișierelor tale exact cum sunt în folderul models/
+        // --- LISTA TA CU CATEGORII ---
         const myModels = [
             { name: "Crate", file: "Crate.fbx" },
             { name: "ElectricalWarningSign", file: "ElectricalWarningSign.fbx" },
@@ -76,94 +109,110 @@
             { name: "RobotV4", file: "RobotV4.fbx" },
             { name: "StandButton", file: "StandButton.fbx" },
             { name: "WoodenPallet", file: "WoodenPallet.fbx" },
-            { name: "WoodenPalletV2", file: "WoodenPalletV2.fbx" },
-            
+            { name: "WoodenPalletV2", file: "WoodenPalletV2.fbx" }
         ];
 
-        let scene, camera, renderer, controls, currentModel;
+        let scene, camera, renderer, controls, currentModel, currentFile = "";
         const loader = new FBXLoader();
         const loaderUI = document.getElementById('loader');
+        const downloadBtn = document.getElementById('download-btn');
+        const listContainer = document.getElementById('model-list');
 
         init();
-        createMenu();
+        updateMenu(); // Generăm meniul inițial
 
-        function init() {
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x222222);
+        // --- FILTRARE ȘI CĂUTARE ---
+        document.getElementById('search-input').addEventListener('input', updateMenu);
+        document.getElementById('category-filter').addEventListener('change', updateMenu);
+
+        function updateMenu() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const categoryTerm = document.getElementById('category-filter').value;
             
-            camera = new THREE.PerspectiveCamera(45, (window.innerWidth - 250) / window.innerHeight, 1, 10000);
-            camera.position.set(200, 200, 500);
+            listContainer.innerHTML = "";
 
-            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 2);
-            scene.add(hemiLight);
+            const filtered = myModels.filter(m => {
+                const matchesSearch = m.name.toLowerCase().includes(searchTerm);
+                const matchesCategory = categoryTerm === "all" || m.cat === categoryTerm;
+                return matchesSearch && matchesCategory;
+            });
 
-            const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
-            dirLight.position.set(100, 200, 100);
-            scene.add(dirLight);
-
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth - 250, window.innerHeight);
-            document.getElementById('viewer-container').appendChild(renderer.domElement);
-
-            controls = new OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true;
-
-            window.addEventListener('resize', onWindowResize);
-            animate();
-            
-            // Încarcă primul model implicit
-            if(myModels.length > 0) loadModel(myModels[0].file);
-        }
-
-        function createMenu() {
-            const listContainer = document.getElementById('model-list');
-            myModels.forEach((m, index) => {
+            filtered.forEach(m => {
                 const div = document.createElement('div');
-                div.className = 'model-card';
-                div.innerText = m.name;
+                div.className = 'model-card' + (currentFile === m.file ? ' active' : '');
+                div.innerText = `${m.name} (${m.cat})`;
                 div.onclick = () => {
-                    document.querySelectorAll('.model-card').forEach(el => el.classList.remove('active'));
-                    div.classList.add('active');
                     loadModel(m.file);
+                    updateMenu(); // Refresh pentru clasa 'active'
                 };
                 listContainer.appendChild(div);
             });
         }
 
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a1a);
+            
+            camera = new THREE.PerspectiveCamera(45, (window.innerWidth - 280) / window.innerHeight, 1, 20000);
+            camera.position.set(600, 600, 600);
+
+            scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 2));
+            const light = new THREE.DirectionalLight(0xffffff, 1.5);
+            light.position.set(100, 200, 100);
+            scene.add(light);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth - 280, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.getElementById('viewer-container').appendChild(renderer.domElement);
+
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+
+            window.addEventListener('resize', () => {
+                camera.aspect = (window.innerWidth - 280) / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth - 280, window.innerHeight);
+            });
+
+            animate();
+            if(myModels.length > 0) loadModel(myModels[0].file);
+        }
+
         function loadModel(fileName) {
             if (currentModel) scene.remove(currentModel);
+            currentFile = fileName;
             loaderUI.style.display = 'block';
+            downloadBtn.disabled = true;
 
             loader.load(`models/${fileName}`, (object) => {
                 currentModel = object;
-                
-                // Centrare automată
                 const box = new THREE.Box3().setFromObject(object);
                 const center = box.getCenter(new THREE.Vector3());
                 const size = box.getSize(new THREE.Vector3()).length();
                 
-                object.position.sub(center); // îl mută în originea 0,0,0
+                object.position.sub(center); 
                 scene.add(object);
 
-                // Resetăm camera să vadă noul model
                 camera.position.set(size, size, size);
-                camera.lookAt(0, 0, 0);
                 controls.target.set(0, 0, 0);
                 
                 loaderUI.style.display = 'none';
+                downloadBtn.disabled = false;
             }, (xhr) => {
-                loaderUI.innerText = `Încărcare: ${Math.round(xhr.loaded / xhr.total * 100)}%`;
+                const p = Math.round(xhr.loaded / xhr.total * 100);
+                loaderUI.innerText = `Încărcare: ${p}%`;
             }, (err) => {
-                console.error(err);
-                loaderUI.innerText = "Eroare la încărcare!";
+                loaderUI.innerText = "Eroare la model!";
             });
         }
 
-        function onWindowResize() {
-            camera.aspect = (window.innerWidth - 250) / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth - 250, window.innerHeight);
-        }
+        downloadBtn.onclick = () => {
+            const a = document.createElement('a');
+            a.href = `models/${currentFile}`;
+            a.download = currentFile;
+            a.click();
+        };
 
         function animate() {
             requestAnimationFrame(animate);
