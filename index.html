@@ -58,11 +58,11 @@
         <input type="text" id="search-input" placeholder="Caută model...">
         
         <select id="category-filter">
-            <option value="all">Toate categoriile</option>
-            <option value="Industrial">Industrial</option>
-            <option value="Robotics">Robotics</option>
+            <option value="all">All Types</option>
+            <option value="Characters">Characters</option>
+            <option value="Interactable">Interactable</option>
             <option value="Props">Props</option>
-            <option value="Signs">Semne/Avertizări</option>
+            <option value="Decor">Decor</option>
         </select>
 
         <div id="model-list"></div>
@@ -90,26 +90,33 @@
 
         // --- LISTA TA CU CATEGORII ---
         const myModels = [
-            { name: "Crate", file: "Crate.fbx" },
-            { name: "ElectricalWarningSign", file: "ElectricalWarningSign.fbx" },
-            { name: "FirelWarningSign", file: "FireWarningSign.fbx" },
-            { name: "ForkliftTrolley", file: "ForkliftTrolley.fbx" },
-            { name: "Generator", file: "Generator.fbx" },
-            { name: "IndustrialTank", file: "IndustrialTank.fbx" },
-            { name: "IndustrialTankStand", file: "IndustrialTankStand.fbx" },
-            { name: "IndustrialTankTower", file: "IndustrialTankTower.fbx" },
-            { name: "MetalBarrel", file: "MetalBarrel.fbx" },
-            { name: "RadioActiveWarningSign", file: "RadioActiveWarningSign.fbx" },
-            { name: "Reservoir", file: "Reservoir.fbx" },
-            { name: "RoboArm", file: "RoboArm.fbx" },
-            { name: "RoboArm2", file: "RoboArm2.fbx" },
-            { name: "Robot", file: "Robot.fbx" },
-            { name: "RobotV2", file: "RobotV2.fbx" },
-            { name: "RobotV3", file: "RobotV3.fbx" },
-            { name: "RobotV4", file: "RobotV4.fbx" },
-            { name: "StandButton", file: "StandButton.fbx" },
-            { name: "WoodenPallet", file: "WoodenPallet.fbx" },
-            { name: "WoodenPalletV2", file: "WoodenPalletV2.fbx" }
+
+            
+            { name: "Crate", file: "Crate.fbx", cat: "Interactable"},
+            { name: "RoboArm", file: "RoboArm.fbx", cat: "Interactable"},
+            { name: "RoboArm2", file: "RoboArm2.fbx", cat: "Interactable" },
+
+            { name: "Robot", file: "Robot.fbx", cat: "Characters" },
+            { name: "RobotV2", file: "RobotV2.fbx", cat: "Characters" },
+            { name: "RobotV3", file: "RobotV3.fbx", cat: "Characters" },
+            { name: "RobotV4", file: "RobotV4.fbx", cat: "Characters" },
+
+            { name: "Generator", file: "Generator.fbx", cat:"Props"},
+            { name: "IndustrialTank", file: "IndustrialTank.fbx", cat:"Props" },
+            { name: "IndustrialTankStand", file: "IndustrialTankStand.fbx", cat:"Props" },
+            { name: "IndustrialTankTower", file: "IndustrialTankTower.fbx", cat:"Props" },
+            { name: "Reservoir", file: "Reservoir.fbx", cat:"Props" },
+    
+
+            { name: "StandButton", file: "StandButton.fbx", cat: "Props" },
+            { name: "WoodenPallet", file: "WoodenPallet.fbx", cat: "Props"},
+            { name: "WoodenPalletV2", file: "WoodenPalletV2.fbx", cat: "Props"},
+            { name: "MetalBarrel", file: "MetalBarrel.fbx", cat: "Props" },
+
+            { name: "FirelWarningSign", file: "FireWarningSign.fbx", cat:"Decor"},
+            { name: "ElectricalWarningSign", file: "ElectricalWarningSign.fbx", cat:"Decor" },
+            { name: "RadioActiveWarningSign", file: "RadioActiveWarningSign.fbx", cat:"Decor" }
+
         ];
 
         let scene, camera, renderer, controls, currentModel, currentFile = "";
