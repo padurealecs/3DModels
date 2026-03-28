@@ -3,24 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Library - FBX Viewer</title>
+    <title>3D Library - Grid Viewer</title>
     <style>
-        body { margin: 0; padding: 0; overflow: hidden; font-family: sans-serif; background-color: #1a1a1a; }
-        #ui { position: absolute; top: 20px; left: 20px; z-index: 10; color: white; background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px; pointer-events: none; }
-        #loader { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 1.2rem; }
+        body { margin: 0; padding: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1a1a1a; display: flex; }
+        
+        /* Meniul Lateral */
+        #sidebar { 
+            width: 250px; height: 100vh; background: #2c2c2c; color: white; 
+            padding: 20px; box-sizing: border-box; overflow-y: auto; border-right: 1px solid #444;
+            z-index: 100;
+        }
+        
+        .model-card {
+            background: #3d3d3d; padding: 10px; margin-bottom: 10px; border-radius: 5px;
+            cursor: pointer; transition: 0.3s; text-align: center; border: 2px solid transparent;
+        }
+        .model-card:hover { background: #505050; border-color: #007bff; }
+        .model-card.active { border-color: #007bff; background: #444; }
+
+        /* Zona de Vizualizare */
+        #viewer-container { flex-grow: 1; position: relative; height: 100vh; }
+        #loader { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; display: none; }
         canvas { display: block; }
     </style>
 </head>
 <body>
 
-    <div id="ui">
-        <h2 style="margin:0 0 10px 0;">3D Model Library</h2>
-        <p id="status">Status: Se inițializează...</p>
+    <div id="sidebar">
+        <h3>Modele 3D</h3>
+        <div id="model-list">
+            <!-- Aici vor apărea modelele tale -->
+        </div>
     </div>
-    
-    <div id="loader">Se încarcă motorul 3D...</div>
 
-    <!-- Importam Three.js si modulele necesare direct din CDN -->
+    <div id="viewer-container">
+        <div id="loader">Se încarcă...</div>
+    </div>
+
     <script type="importmap">
         {
             "imports": {
@@ -35,92 +54,96 @@
         import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-        let scene, camera, renderer, controls;
+        // --- LISTA TA DE MODELE ---
+        // Adaugă aici numele fișierelor tale exact cum sunt în folderul models/
+        const myModels = [
+            { name: "Generator", file: "Generator.fbx" },
+            { name: "IndustrialTank", file: "IndustrialTank.fbx" }
+        ];
 
-        // --- CONFIGURARE ---
-        // Schimbă aici cu numele fișierului tău din folderul models/
-        const MODEL_PATH = 'models/Generator.fbx'; 
+        let scene, camera, renderer, controls, currentModel;
+        const loader = new FBXLoader();
+        const loaderUI = document.getElementById('loader');
 
         init();
+        createMenu();
 
         function init() {
-            // 1. SCENA
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x333333);
-            scene.fog = new THREE.Fog(0x333333, 1000, 5000);
-
-            // 2. CAMERA
-            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 5000);
+            scene.background = new THREE.Color(0x222222);
+            
+            camera = new THREE.PerspectiveCamera(45, (window.innerWidth - 250) / window.innerHeight, 1, 10000);
             camera.position.set(200, 200, 500);
 
-            // 3. LUMINI
             const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 2);
-            hemiLight.position.set(0, 200, 0);
             scene.add(hemiLight);
 
             const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
             dirLight.position.set(100, 200, 100);
-            dirLight.castShadow = true;
             scene.add(dirLight);
 
-            // 4. RENDERER
             renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setPixelRatio(window.devicePixelRatio);
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.shadowMap.enabled = true;
-            document.body.appendChild(renderer.domElement);
+            renderer.setSize(window.innerWidth - 250, window.innerHeight);
+            document.getElementById('viewer-container').appendChild(renderer.domElement);
 
-            // 5. CONTROALE
             controls = new OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
 
-            // 6. ÎNCĂRCARE MODEL
-            const loader = new FBXLoader();
-            const statusText = document.getElementById('status');
-            const loaderDiv = document.getElementById('loader');
-
-            statusText.innerText = "Status: Se încarcă modelul...";
-
-            loader.load(MODEL_PATH, (object) => {
-                // Auto-scale și centrare
-                const box = new THREE.Box3().setFromObject(object);
-                const size = box.getSize(new THREE.Vector3()).length();
-                const center = box.getCenter(new THREE.Vector3());
-
-                object.position.x += (object.position.x - center.x);
-                object.position.y += (object.position.y - center.y);
-                object.position.z += (object.position.z - center.z);
-                
-                scene.add(object);
-                
-                statusText.innerText = "Status: Model afișat";
-                loaderDiv.style.display = 'none';
-                
-                // Ajustăm camera să vadă tot modelul
-                camera.position.copy(center);
-                camera.position.x += size / 1.5;
-                camera.position.y += size / 1.5;
-                camera.position.z += size / 1.5;
-                camera.lookAt(center);
-                controls.target.copy(center);
-
-            }, (xhr) => {
-                const percent = Math.round((xhr.loaded / xhr.total) * 100);
-                loaderDiv.innerText = `Se încarcă: ${percent}%`;
-            }, (error) => {
-                console.error(error);
-                statusText.innerText = "Eroare: Verifică dacă fișierul există în folderul models/";
-                loaderDiv.innerText = "Eroare la încărcare!";
-            });
-
             window.addEventListener('resize', onWindowResize);
             animate();
+            
+            // Încarcă primul model implicit
+            if(myModels.length > 0) loadModel(myModels[0].file);
+        }
+
+        function createMenu() {
+            const listContainer = document.getElementById('model-list');
+            myModels.forEach((m, index) => {
+                const div = document.createElement('div');
+                div.className = 'model-card';
+                div.innerText = m.name;
+                div.onclick = () => {
+                    document.querySelectorAll('.model-card').forEach(el => el.classList.remove('active'));
+                    div.classList.add('active');
+                    loadModel(m.file);
+                };
+                listContainer.appendChild(div);
+            });
+        }
+
+        function loadModel(fileName) {
+            if (currentModel) scene.remove(currentModel);
+            loaderUI.style.display = 'block';
+
+            loader.load(`models/${fileName}`, (object) => {
+                currentModel = object;
+                
+                // Centrare automată
+                const box = new THREE.Box3().setFromObject(object);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3()).length();
+                
+                object.position.sub(center); // îl mută în originea 0,0,0
+                scene.add(object);
+
+                // Resetăm camera să vadă noul model
+                camera.position.set(size, size, size);
+                camera.lookAt(0, 0, 0);
+                controls.target.set(0, 0, 0);
+                
+                loaderUI.style.display = 'none';
+            }, (xhr) => {
+                loaderUI.innerText = `Încărcare: ${Math.round(xhr.loaded / xhr.total * 100)}%`;
+            }, (err) => {
+                console.error(err);
+                loaderUI.innerText = "Eroare la încărcare!";
+            });
         }
 
         function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.aspect = (window.innerWidth - 250) / window.innerHeight;
             camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setSize(window.innerWidth - 250, window.innerHeight);
         }
 
         function animate() {
