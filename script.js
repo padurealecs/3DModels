@@ -18,9 +18,9 @@ const myModels = [
     { name: "Tank Tower", file: "IndustrialTankTower.fbx", cat: "Props" },
     { name: "Stand Button", file: "StandButton.fbx", cat: "Props" },
     { name: "Wooden Pallet", file: "WoodenPallet.fbx", cat: "Props" },
-    { name: "Metal Barrel", file: "MetalBarrelRed.fbx", cat: "Props" },
-    { name: "Metal Barrel", file: "MetalBarrelBlue.fbx", cat: "Props" },
-    { name: "Metal Barrel", file: "MetalBarrelBlack.fbx", cat: "Props" },
+    { name: "Metal Barrel Red", file: "MetalBarrelRed.fbx", cat: "Props" },
+    { name: "Metal Barrel Blue", file: "MetalBarrelBlue.fbx", cat: "Props" },
+    { name: "Metal Barrel Black", file: "MetalBarrelBlack.fbx", cat: "Props" },
 
     { name: "Fire Warning", file: "FireWarningSign.fbx", cat: "Decor" },
     { name: "Electrical Warning", file: "ElectricalWarningSign.fbx", cat: "Decor" },
