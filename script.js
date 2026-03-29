@@ -69,6 +69,7 @@ async function getSnapshot(fileName) {
     });
 }
 
+// --- RENDER GRID MODIFICAT (Așteaptă rând pe rând) ---
 async function renderGrid() {
     const searchVal = document.getElementById('search').value.toLowerCase();
     const catVal = document.getElementById('filter').value;
@@ -78,13 +79,15 @@ async function renderGrid() {
         (catVal === 'all' || m.cat === catVal) && m.name.toLowerCase().includes(searchVal)
     );
 
-    // Creăm cardurile
+    // 1. Mai întâi creăm structura vizuală (cardurile) pentru toate
     for (const m of filtered) {
         const id = m.name.replace(/\s+/g, '');
         const card = document.createElement('div');
         card.className = 'card';
         card.innerHTML = `
-            <div class="thumb-box" id="thumb-${id}"><span class="gen-text">...</span></div>
+            <div class="thumb-box" id="thumb-${id}">
+                <span class="gen-text">LOADING...</span>
+            </div>
             <div class="card-info">
                 <span class="card-name">${m.name}</span>
                 <span class="tag">${m.cat}</span>
@@ -94,12 +97,17 @@ async function renderGrid() {
         card.onclick = () => openModal(m);
     }
 
-    // Randăm imaginile una câte una (rezolvă problema primelor 3)
+    // 2. ACUM generăm imaginile una câte una (secvențial)
+    // Asta asigură că primele 3 primesc atenția totală a GPU-ului
     for (const m of filtered) {
         const id = m.name.replace(/\s+/g, '');
-        const imgData = await getSnapshot(m.file);
+        const imgData = await getSnapshot(m.file); // Așteptăm să termine înainte de următorul
         const box = document.getElementById(`thumb-${id}`);
-        if(imgData && box) box.innerHTML = `<img src="${imgData}" class="thumb-img">`;
+        if(imgData && box) {
+            box.innerHTML = `<img src="${imgData}" class="thumb-img">`;
+        } else if(box) {
+            box.innerHTML = `<span class="gen-text" style="color:red">ERROR</span>`;
+        }
     }
 }
 
@@ -111,16 +119,36 @@ function openModal(m) {
     if (!mainRenderer) {
         const container = document.getElementById('viewer');
         mainScene = new THREE.Scene();
-        mainScene.background = new THREE.Color(0x111111);
+        
+        // 1. FUNDALUL VIEWER-ULUI: Un gri-maroniu stins (Earthy Neutral)
+        // Nu folosim negru, pentru că obiectele negre dispar în el.
+        mainScene.background = new THREE.Color(0x252321); 
+        
         mainCam = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 1, 20000);
-        mainRenderer = new THREE.WebGLRenderer({ antialias: true });
+        mainRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         mainRenderer.setSize(container.clientWidth, container.clientHeight);
+        
+        // 2. CALITATEA CULORILOR: Setăm tone mapping pentru culori mai naturale
+        mainRenderer.outputColorSpace = THREE.SRGBColorSpace;
+        mainRenderer.toneMapping = THREE.ReinhardToneMapping;
+        mainRenderer.toneMappingExposure = 1.2;
+
         container.appendChild(mainRenderer.domElement);
         
-        mainScene.add(new THREE.AmbientLight(0xffffff, 0.8));
-        const dLight = new THREE.DirectionalLight(0xffffff, 1.5);
-        dLight.position.set(10, 20, 10);
+        // 3. ILUMINAREA "EARTHY": 
+        // HemisphereLight: Sus e un alb-albăstrui (cer), jos e un maroniu (pământ)
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x443322, 1.2);
+        mainScene.add(hemiLight);
+
+        // DirectionalLight: O lumină caldă, ca soarele, pentru contrast
+        const dLight = new THREE.DirectionalLight(0xfff5e6, 2.5); 
+        dLight.position.set(5, 10, 7);
         mainScene.add(dLight);
+
+        // O a doua lumină din spate pentru a defini marginile (Rim Light)
+        const backLight = new THREE.PointLight(0xffffff, 1.0);
+        backLight.position.set(-10, 5, -10);
+        mainScene.add(backLight);
 
         mainControls = new OrbitControls(mainCam, mainRenderer.domElement);
         mainControls.enableDamping = true;
@@ -137,12 +165,29 @@ function openModal(m) {
     
     loader.load(`models/${m.file}`, (obj) => {
         currentModel = obj;
+
+        // 4. REPARAREA MATERIALELOR: 
+        // Dacă modelul e tot negru, forțăm materialele să reacționeze la lumină
+        obj.traverse(n => {
+            if(n.isMesh) {
+                // Dacă materialul e prea închis, îi dăm puțin ambient
+                if(n.material) {
+                    n.material.needsUpdate = true;
+                    // Opțional: dacă vrei să forțezi o culoare pe obiectele complet negre:
+                    // if(n.material.color.r === 0) n.material.color.set(0x555555);
+                }
+            }
+        });
+
         const box = new THREE.Box3().setFromObject(obj);
         const center = box.getCenter(new THREE.Vector3());
         const bSize = box.getSize(new THREE.Vector3()).length();
+        
         obj.position.sub(center);
         mainScene.add(obj);
-        mainCam.position.set(bSize, bSize, bSize);
+
+        // Ajustăm camera să vadă obiectul mai de aproape
+        mainCam.position.set(bSize * 0.8, bSize * 0.8, bSize * 0.8);
         mainControls.target.set(0,0,0);
 
         let tris = 0;
