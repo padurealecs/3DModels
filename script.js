@@ -21,7 +21,7 @@ const myModels = [
     { name: "Metal Barrel Red", file: "MetalBarrelRed.fbx", cat: "Props" },
     { name: "Metal Barrel Blue", file: "MetalBarrelBlue.fbx", cat: "Props" },
     { name: "Metal Barrel Black", file: "MetalBarrelBlack.fbx", cat: "Props" },
-    
+
     { name: "Fire Warning", file: "FireWarningSign.fbx", cat: "Decor" },
     { name: "Electrical Warning", file: "ElectricalWarningSign.fbx", cat: "Decor" },
     { name: "Radioactive Warning", file: "RadioActiveWarningSign.fbx", cat: "Decor" }
@@ -128,33 +128,35 @@ function openModal(m) {
         mainRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         mainRenderer.setSize(container.clientWidth, container.clientHeight);
         
-        // BOOST DE LUMINOZITATE ȘI CULOARE
+        // --- SETĂRI REINHARD (Cele mai bune pentru realism) ---
         mainRenderer.outputColorSpace = THREE.SRGBColorSpace;
-        mainRenderer.toneMapping = THREE.LinearToneMapping; // Am schimbat în Linear pentru luminozitate brută
-        mainRenderer.toneMappingExposure = 2.2; // Crescut de la 1.2 la 2.2 pentru un aspect mult mai "bright"
+        mainRenderer.toneMapping = THREE.ReinhardToneMapping; 
+        mainRenderer.toneMappingExposure = 1.5; // Valoare medie, sigură
 
         container.appendChild(mainRenderer.domElement);
         
-        // ILUMINARE 360 GRADE (Fără zone negre)
-        // 1. Ambient puternic (baza)
-        mainScene.add(new THREE.AmbientLight(0xffffff, 2.0));
+        // --- ILUMINARE BALANSATĂ ---
+        // 1. Ambient slab (doar cât să nu fie negru în umbre)
+        mainScene.add(new THREE.AmbientLight(0xffffff, 0.5));
 
-        // 2. Hemisphere (Lumină de sus și jos)
-        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x888888, 1.5);
-        mainScene.add(hemiLight);
+        // 2. Hemisphere (pentru o tentă naturală sus/jos)
+        const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.8);
+        mainScene.add(hemi);
 
-        // 3. Trei lumini direcționale din unghiuri diferite pentru volum
-        const dLight1 = new THREE.DirectionalLight(0xffffff, 2.5); 
-        dLight1.position.set(5, 10, 7);
-        mainScene.add(dLight1);
+        // 3. KEY LIGHT (Lumina principală care dă formă)
+        const keyLight = new THREE.DirectionalLight(0xffffff, 1.8);
+        keyLight.position.set(5, 10, 5);
+        mainScene.add(keyLight);
 
-        const dLight2 = new THREE.DirectionalLight(0xffffff, 1.5);
-        dLight2.position.set(-10, 5, -5);
-        mainScene.add(dLight2);
+        // 4. FILL LIGHT (Lumină mai slabă din lateral să umple umbrele grele)
+        const fillLight = new THREE.DirectionalLight(0xffffff, 0.6);
+        fillLight.position.set(-5, 2, 2);
+        mainScene.add(fillLight);
 
-        const dLight3 = new THREE.DirectionalLight(0xffffff, 1.0);
-        dLight3.position.set(0, -10, 0); // Lumină de jos în sus să nu avem burta neagră
-        mainScene.add(dLight3);
+        // 5. RIM LIGHT (Lumină din spate care „taie” conturul obiectului)
+        const rimLight = new THREE.DirectionalLight(0xffffff, 1.0);
+        rimLight.position.set(0, 5, -10);
+        mainScene.add(rimLight);
 
         mainControls = new OrbitControls(mainCam, mainRenderer.domElement);
         mainControls.enableDamping = true;
@@ -172,15 +174,12 @@ function openModal(m) {
     loader.load(`models/${m.file}`, (obj) => {
         currentModel = obj;
 
-        // FORȚARE MATERIALE SĂ FIE LUMINATE
         obj.traverse(n => {
             if(n.isMesh) {
                 if(n.material) {
                     n.material.needsUpdate = true;
-                    // Dacă obiectul are hărți de metal/negru care îl fac prea închis
-                    if(n.material.emissive) {
-                        n.material.emissive.setHex(0x222222); // Mic boost de strălucire proprie
-                    }
+                    // Resetăm emisia dacă am pus-o anterior, ca să nu „ardă”
+                    if(n.material.emissive) n.material.emissive.setHex(0x000000);
                 }
             }
         });
@@ -192,7 +191,7 @@ function openModal(m) {
         obj.position.sub(center);
         mainScene.add(obj);
 
-        mainCam.position.set(bSize * 0.8, bSize * 0.8, bSize * 0.8);
+        mainCam.position.set(bSize * 0.9, bSize * 0.9, bSize * 0.9);
         mainControls.target.set(0,0,0);
 
         let tris = 0;
