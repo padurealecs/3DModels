@@ -7,15 +7,15 @@ const myModels = [
     { name: "Robo Arm", file: "RoboArm.fbx", cat: "Interactable" },
     { name: "Robo Arm 2", file: "RoboArm2.fbx", cat: "Interactable" },
 
-    { name: "Robot Classic", file: "Robot.fbx", cat: "Characters" },
+    { name: "Robot V1", file: "Robot.fbx", cat: "Characters" },
     { name: "Robot V2", file: "RobotV2.fbx", cat: "Characters" },
     { name: "Robot V3", file: "RobotV3.fbx", cat: "Characters" },
     { name: "Robot V4", file: "RobotV4.fbx", cat: "Characters" },
 
     { name: "Generator", file: "Generator.fbx", cat: "Props" },
     { name: "Industrial Tank", file: "IndustrialTank.fbx", cat: "Props" },
-    { name: "Tank Stand", file: "IndustrialTankStand.fbx", cat: "Props" },
-    { name: "Tank Tower", file: "IndustrialTankTower.fbx", cat: "Props" },
+    { name: "Industrial Tank Stand", file: "IndustrialTankStand.fbx", cat: "Props" },
+    { name: "Industrial Tank Tower", file: "IndustrialTankTower.fbx", cat: "Props" },
     { name: "Stand Button", file: "StandButton.fbx", cat: "Props" },
     { name: "Wooden Pallet", file: "WoodenPallet.fbx", cat: "Props" },
     { name: "Metal Barrel Red", file: "MetalBarrelRed.fbx", cat: "Props" },
