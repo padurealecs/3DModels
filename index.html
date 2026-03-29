@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D Asset Library - Dark Neutral</title>
-    <style>
+    <link rel="stylesheet" href="styles.css">
+    <!-- <style>
         :root {
             --bg-main: #121212;        /* Negru/Gri foarte închis */
             --bg-card: #1e1e1e;        /* Gri Antracit */
@@ -104,7 +105,7 @@
             font-size: 28px; cursor: pointer; z-index: 1001;
         }
         .close-btn:hover { color: #fff; }
-    </style>
+    </style> -->
 </head>
 <body>
 
@@ -147,7 +148,9 @@
     }
 </script>
 
-<script type="module">
+<script src="script.js"></script>
+
+<!-- <script type="module">
     import * as THREE from 'three';
     import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -168,7 +171,9 @@
         { name: "Tank Tower", file: "IndustrialTankTower.fbx", cat: "Props" },
         { name: "Stand Button", file: "StandButton.fbx", cat: "Props" },
         { name: "Wooden Pallet", file: "WoodenPallet.fbx", cat: "Props" },
-        { name: "Metal Barrel", file: "MetalBarrel.fbx", cat: "Props" },
+        { name: "Metal Barrel", file: "MetalBarrelRed.fbx", cat: "Props" },
+        { name: "Metal Barrel", file: "MetalBarrelBlue.fbx", cat: "Props" },
+        { name: "Metal Barrel", file: "MetalBarrelBlack.fbx", cat: "Props" },
 
         { name: "Fire Warning", file: "FireWarningSign.fbx", cat: "Decor" },
         { name: "Electrical Warning", file: "ElectricalWarningSign.fbx", cat: "Decor" },
@@ -314,6 +319,6 @@
     };
 
     renderGrid();
-</script>
+</script> -->
 </body>
 </html>
