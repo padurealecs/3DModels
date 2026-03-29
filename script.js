@@ -21,7 +21,7 @@ const myModels = [
     { name: "Metal Barrel Red", file: "MetalBarrelRed.fbx", cat: "Props" },
     { name: "Metal Barrel Blue", file: "MetalBarrelBlue.fbx", cat: "Props" },
     { name: "Metal Barrel Black", file: "MetalBarrelBlack.fbx", cat: "Props" },
-
+    
     { name: "Fire Warning", file: "FireWarningSign.fbx", cat: "Decor" },
     { name: "Electrical Warning", file: "ElectricalWarningSign.fbx", cat: "Decor" },
     { name: "Radioactive Warning", file: "RadioActiveWarningSign.fbx", cat: "Decor" }
@@ -32,21 +32,27 @@ const modalEl = document.getElementById('modal');
 const loader = new FBXLoader();
 let mainScene, mainCam, mainRenderer, mainControls, currentModel;
 
-// --- SECVENTIAL SNAPSHOT ENGINE ---
+// --- SECVENTIAL SNAPSHOT ENGINE (Lumină Maximă în Grid) ---
 async function getSnapshot(fileName) {
     return new Promise((resolve) => {
         const size = 256;
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
         renderer.setSize(size, size);
+        
+        // Optimizare culori pentru snapshot
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        
         const scene = new THREE.Scene();
         
-        // Strong lights for dark theme contrast
-        scene.add(new THREE.AmbientLight(0xffffff, 1.2)); 
-        const d1 = new THREE.DirectionalLight(0xffffff, 1.5);
-        d1.position.set(1, 1, 1);
+        // ILUMINARE GLOBALĂ (Snapshot)
+        scene.add(new THREE.AmbientLight(0xffffff, 2.5)); // Am crescut de la 1.2 la 2.5
+        
+        const d1 = new THREE.DirectionalLight(0xffffff, 2.0);
+        d1.position.set(5, 5, 5);
         scene.add(d1);
-        const d2 = new THREE.DirectionalLight(0xffffff, 0.8);
-        d2.position.set(-1, 0.5, -1);
+
+        const d2 = new THREE.DirectionalLight(0xffffff, 1.5);
+        d2.position.set(-5, 5, -5); // Lumină din spate-stânga pentru a elimina umbrele
         scene.add(d2);
 
         const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 10000);
@@ -58,7 +64,7 @@ async function getSnapshot(fileName) {
             obj.position.sub(center);
             scene.add(obj);
             
-            camera.position.set(bSize * 0.8, bSize * 0.8, bSize * 0.8);
+            camera.position.set(bSize * 0.9, bSize * 0.9, bSize * 0.9);
             camera.lookAt(0,0,0);
             
             renderer.render(scene, camera);
@@ -69,7 +75,6 @@ async function getSnapshot(fileName) {
     });
 }
 
-// --- RENDER GRID MODIFICAT (Așteaptă rând pe rând) ---
 async function renderGrid() {
     const searchVal = document.getElementById('search').value.toLowerCase();
     const catVal = document.getElementById('filter').value;
@@ -79,7 +84,6 @@ async function renderGrid() {
         (catVal === 'all' || m.cat === catVal) && m.name.toLowerCase().includes(searchVal)
     );
 
-    // 1. Mai întâi creăm structura vizuală (cardurile) pentru toate
     for (const m of filtered) {
         const id = m.name.replace(/\s+/g, '');
         const card = document.createElement('div');
@@ -97,11 +101,9 @@ async function renderGrid() {
         card.onclick = () => openModal(m);
     }
 
-    // 2. ACUM generăm imaginile una câte una (secvențial)
-    // Asta asigură că primele 3 primesc atenția totală a GPU-ului
     for (const m of filtered) {
         const id = m.name.replace(/\s+/g, '');
-        const imgData = await getSnapshot(m.file); // Așteptăm să termine înainte de următorul
+        const imgData = await getSnapshot(m.file);
         const box = document.getElementById(`thumb-${id}`);
         if(imgData && box) {
             box.innerHTML = `<img src="${imgData}" class="thumb-img">`;
@@ -111,6 +113,7 @@ async function renderGrid() {
     }
 }
 
+// --- OPEN MODAL (Lumină Maximă în Viewer) ---
 function openModal(m) {
     modalEl.style.display = 'block';
     document.getElementById('m-title').innerText = m.name;
@@ -119,36 +122,39 @@ function openModal(m) {
     if (!mainRenderer) {
         const container = document.getElementById('viewer');
         mainScene = new THREE.Scene();
-        
-        // 1. FUNDALUL VIEWER-ULUI: Un gri-maroniu stins (Earthy Neutral)
-        // Nu folosim negru, pentru că obiectele negre dispar în el.
         mainScene.background = new THREE.Color(0x252321); 
         
         mainCam = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 1, 20000);
         mainRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         mainRenderer.setSize(container.clientWidth, container.clientHeight);
         
-        // 2. CALITATEA CULORILOR: Setăm tone mapping pentru culori mai naturale
+        // BOOST DE LUMINOZITATE ȘI CULOARE
         mainRenderer.outputColorSpace = THREE.SRGBColorSpace;
-        mainRenderer.toneMapping = THREE.ReinhardToneMapping;
-        mainRenderer.toneMappingExposure = 1.2;
+        mainRenderer.toneMapping = THREE.LinearToneMapping; // Am schimbat în Linear pentru luminozitate brută
+        mainRenderer.toneMappingExposure = 2.2; // Crescut de la 1.2 la 2.2 pentru un aspect mult mai "bright"
 
         container.appendChild(mainRenderer.domElement);
         
-        // 3. ILUMINAREA "EARTHY": 
-        // HemisphereLight: Sus e un alb-albăstrui (cer), jos e un maroniu (pământ)
-        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x443322, 1.2);
+        // ILUMINARE 360 GRADE (Fără zone negre)
+        // 1. Ambient puternic (baza)
+        mainScene.add(new THREE.AmbientLight(0xffffff, 2.0));
+
+        // 2. Hemisphere (Lumină de sus și jos)
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x888888, 1.5);
         mainScene.add(hemiLight);
 
-        // DirectionalLight: O lumină caldă, ca soarele, pentru contrast
-        const dLight = new THREE.DirectionalLight(0xfff5e6, 2.5); 
-        dLight.position.set(5, 10, 7);
-        mainScene.add(dLight);
+        // 3. Trei lumini direcționale din unghiuri diferite pentru volum
+        const dLight1 = new THREE.DirectionalLight(0xffffff, 2.5); 
+        dLight1.position.set(5, 10, 7);
+        mainScene.add(dLight1);
 
-        // O a doua lumină din spate pentru a defini marginile (Rim Light)
-        const backLight = new THREE.PointLight(0xffffff, 1.0);
-        backLight.position.set(-10, 5, -10);
-        mainScene.add(backLight);
+        const dLight2 = new THREE.DirectionalLight(0xffffff, 1.5);
+        dLight2.position.set(-10, 5, -5);
+        mainScene.add(dLight2);
+
+        const dLight3 = new THREE.DirectionalLight(0xffffff, 1.0);
+        dLight3.position.set(0, -10, 0); // Lumină de jos în sus să nu avem burta neagră
+        mainScene.add(dLight3);
 
         mainControls = new OrbitControls(mainCam, mainRenderer.domElement);
         mainControls.enableDamping = true;
@@ -166,15 +172,15 @@ function openModal(m) {
     loader.load(`models/${m.file}`, (obj) => {
         currentModel = obj;
 
-        // 4. REPARAREA MATERIALELOR: 
-        // Dacă modelul e tot negru, forțăm materialele să reacționeze la lumină
+        // FORȚARE MATERIALE SĂ FIE LUMINATE
         obj.traverse(n => {
             if(n.isMesh) {
-                // Dacă materialul e prea închis, îi dăm puțin ambient
                 if(n.material) {
                     n.material.needsUpdate = true;
-                    // Opțional: dacă vrei să forțezi o culoare pe obiectele complet negre:
-                    // if(n.material.color.r === 0) n.material.color.set(0x555555);
+                    // Dacă obiectul are hărți de metal/negru care îl fac prea închis
+                    if(n.material.emissive) {
+                        n.material.emissive.setHex(0x222222); // Mic boost de strălucire proprie
+                    }
                 }
             }
         });
@@ -186,7 +192,6 @@ function openModal(m) {
         obj.position.sub(center);
         mainScene.add(obj);
 
-        // Ajustăm camera să vadă obiectul mai de aproape
         mainCam.position.set(bSize * 0.8, bSize * 0.8, bSize * 0.8);
         mainControls.target.set(0,0,0);
 
